@@ -1,6 +1,5 @@
 #include <libwebsockets.h>
 #include <string.h>
-#include <signal.h>
 
 #include "logger.h"
 #include "server.h"
@@ -29,79 +28,42 @@ struct lws_protocols protocols[] =
   { NULL, NULL, 0, 0 } /* terminator */
 };
 
-void Dispose(SERVER** This) {
-  SERVER* Pointer = *This;
-  if (Pointer != NULL) {
-    if (Pointer->ContextInfo == NULL) {
-      free(Pointer->ContextInfo);
-    }
-    if (Pointer->Context != NULL) {
-      lws_context_destroy(Pointer->Context);
-    }
-    memset(Pointer, 0, sizeof(SERVER));
-    free(Pointer);
-    *This = NULL;
-  }
-}
-
 int Start(SERVER * this) {
-  lws_service(this->Context, 1000000);
+  while(!this->IsStop){
+    lws_service(this->Context, 1000000);
+  }
+
+  this->IsStop = 1;
+
+  return 0;
 }
 
 int Stop(SERVER * this) {
-  Logger->Info("Stopping LWS...");
-  this->IsStop = 1;
   return 0;
 }
 
 SERVER * InitializeServer(int Port) {
-  struct lws_context_creation_info* ContextInfo = NULL;
-  struct lws_context * Context = NULL;
-  SERVER* Return = NULL;
+  struct lws_context_creation_info ContextInfo;
 
-  ContextInfo = calloc(1, sizeof(struct lws_context_creation_info));
-  if (ContextInfo == NULL) {
-    Logger->Error(__FUNCTION__, __LINE__, "Could not allocate memory for ContextInfo");
-    goto FAIL;
+  memset(&ContextInfo, 0, sizeof(ContextInfo));
+
+  ContextInfo.port = Port;
+  ContextInfo.protocols = protocols;
+  ContextInfo.gid = -1;
+  ContextInfo.uid = -1;
+
+  //Server->ContextInfo = ContextInfo;
+  struct lws_context * Context = lws_create_context(&ContextInfo);
+  while(1) {
+    lws_service(Context, 1000000);
   }
 
-  ContextInfo->port = Port;
-  ContextInfo->protocols = protocols;
-  ContextInfo->gid = -1;
-  ContextInfo->uid = -1;
-
-  Context = lws_create_context(ContextInfo);
-  if (Context == NULL) {
-    Logger->Error(__FUNCTION__, __LINE__,"Could not create context for LWS");
-    goto FAIL;
-  }
-
-  Return = calloc(sizeof(SERVER), 1);
-  if (Return == NULL) {
-    Logger->Error(__FUNCTION__, __LINE__,"Could not initialize SERVER Data structure");
-    goto FAIL;
-  }
-
-  Return->Start = Start;
-  Return->Stop = Stop;
-  Return->Dispose = Dispose;
-  Return->ContextInfo = ContextInfo;
-  Return->Context = Context;
-  Return->IsStop = 0;
-
-  goto FINISH;
+  lws_context_destroy(Context);
 
 FAIL:
-  if (ContextInfo != NULL) {
-    free(ContextInfo);
-  }
-  if (Context != NULL) {
-    lws_context_destroy(Context);
-  }
-
-FINISH:
-  return Return;
+  return NULL;
 }
+
 
 SERVER * InitializeServerSSL(int Port) {
   Logger->Info("Using SSL\n");
