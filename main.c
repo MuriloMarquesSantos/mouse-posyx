@@ -15,7 +15,7 @@ static SERVER * Server = NULL;
 int StopSignalHandler(int Signal);
 
 int main() {
-  Logger_New();
+  Logger_New(LOGGER_FILE | LOGGER_STDOUT);
   gMouse = InitializeMouseDevice ();
   gKeyboard = InitializeKeyboardDevice ();
 
