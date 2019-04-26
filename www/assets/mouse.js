@@ -10,20 +10,20 @@ var MouseSocket = function() {
   }
 }
 
-var maxX = 6;
-var maxY = 6;
+var maxX = 5;
+var maxY = 2.5;
 
 function handleOrientation(event) {
   var x = event.beta;  // In degree in the range [-180,180]
   var y = event.gamma; // In degree in the range [-90,90]
 
-  if (x >  90) { x =  90};
-  if (x < -90) { x = -90};
+  if (x >  maxX) { x =  maxX};
+  if (x < -maxX) { x = -maxX};
 
-  x += 90;
-  y += 90;
+  //x += 90;
+  //y += 90;
 
-  command = "MOUSE@"+ maxX*x/180 + "@" + maxY*y/180;
+  command = "MOVE@"+ Math.floor(-y) + "@" + Math.floor(x);
   MOUSE_SOCKET.socket.send(command);
 }
 
